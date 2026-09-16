@@ -12,7 +12,7 @@ public class PlaylistService {
         this.spotifyService = spotifyService;
     }
     
-    public String createPlaylist(PlaylistRequest request) {
-        return "playlist";
+    public String createPlaylist(PlaylistRequest request, String accessToken) {
+        return spotifyService.createSpotifyPlaylist(accessToken, request.getPlaylistName());
     }
 }
