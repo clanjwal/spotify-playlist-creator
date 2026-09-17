@@ -1,6 +1,5 @@
 package com.clanjwal.backend.controller;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,17 +38,14 @@ public class PlaylistController {
         return playlistService.createPlaylist(request, accessToken);
     }
 
-    // temp endpoint to test retrieving saved tracks using static dates, no input from user
-    @GetMapping("/test-saved-tracks")
-    public List<SpotifyTrack> testSavedTracks(HttpSession session) {
+    @GetMapping("/tracks")
+    public List<SpotifyTrack> testSavedTracks(@RequestBody PlaylistRequest request, HttpSession session) {
         String accessToken = (String) session.getAttribute("spotifyAccessToken");
 
         if (accessToken == null) {
             throw new RuntimeException("Spotify account not connected.");
         }
 
-        LocalDate startDate = LocalDate.of(2024, 1, 1);
-        LocalDate endDate = LocalDate.of(2024, 3, 31);
-        return spotifyService.getSavedTracks(accessToken, startDate, endDate);
+        return spotifyService.getSavedTracks(accessToken, request.getStart(), request.getEnd());
     }
 }

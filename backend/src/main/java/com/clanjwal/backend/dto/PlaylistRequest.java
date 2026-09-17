@@ -1,23 +1,24 @@
 package com.clanjwal.backend.dto;
+import java.time.LocalDate;
 
 public class PlaylistRequest {
-    private String start;
-    private String end;
+    private LocalDate start;
+    private LocalDate end;
     private String playlistName;
 
-    public String getStart() {
+    public LocalDate getStart() {
         return start;
     }
 
-    public void setStart(String start) {
+    public void setStart(LocalDate start) {
         this.start = start;
     }
 
-    public String getEnd() {
+    public LocalDate getEnd() {
         return end;
     }
 
-    public void setEnd(String end){
+    public void setEnd(LocalDate end){
         this.end = end;
     }
 
