@@ -2,7 +2,8 @@ package com.clanjwal.backend.service;
 
 import org.springframework.stereotype.Service;
 
-import com.clanjwal.backend.dto.PlaylistRequest;
+import com.clanjwal.backend.dto.CreatePlaylistRequest;
+import com.clanjwal.backend.dto.SpotifyPlaylistResponse;
 
 @Service
 public class PlaylistService {
@@ -12,7 +13,10 @@ public class PlaylistService {
         this.spotifyService = spotifyService;
     }
     
-    public String createPlaylist(PlaylistRequest request, String accessToken) {
-        return spotifyService.createSpotifyPlaylist(accessToken, request.getPlaylistName());
+    public String createPlaylist(CreatePlaylistRequest request, String accessToken) {
+        SpotifyPlaylistResponse playlist = spotifyService.createSpotifyPlaylist(accessToken, request.getPlaylistName());
+        String playlistId = playlist.getId();
+        spotifyService.addTracksToPlaylist(accessToken, playlistId, request.getTrackUris());
+        return "Playlist created successfully with ID: " + playlistId;
     }
 }

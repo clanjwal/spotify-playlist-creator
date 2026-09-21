@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import com.clanjwal.backend.dto.AddTracksRequest;
+import com.clanjwal.backend.dto.SpotifyPlaylistResponse;
 import com.clanjwal.backend.dto.SpotifySavedTrack;
 import com.clanjwal.backend.dto.SpotifySavedTracksResponse;
 import com.clanjwal.backend.dto.SpotifyTrack;
@@ -77,7 +78,7 @@ public class SpotifyService {
                 .body(String.class);
     }
 
-    public String createSpotifyPlaylist(String accessToken, String playlistName) {
+    public SpotifyPlaylistResponse createSpotifyPlaylist(String accessToken, String playlistName) {
         String body = """
             {
                 "name": "%s",
@@ -91,6 +92,6 @@ public class SpotifyService {
             .header("Content-Type", "application/json")
             .body(body)
             .retrieve()
-            .body(String.class);
+            .body(SpotifyPlaylistResponse.class);
     }
 }

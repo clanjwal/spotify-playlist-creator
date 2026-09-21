@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.clanjwal.backend.dto.CreatePlaylistRequest;
 import com.clanjwal.backend.dto.PlaylistRequest;
 import com.clanjwal.backend.dto.SpotifyTrack;
 import com.clanjwal.backend.service.PlaylistService;
@@ -29,8 +30,8 @@ public class PlaylistController {
         this.spotifyService = spotifyService;
     }
 
-    @PostMapping
-    public String createPlaylist(@RequestBody PlaylistRequest request, HttpSession session){
+    @PostMapping("/create")
+    public String createPlaylist(@RequestBody CreatePlaylistRequest request, HttpSession session){
         String accessToken = (String) session.getAttribute("spotifyAccessToken");
         if (accessToken == null) {
             return "Spotify account not connected. Please connect your Spotify account first.";
