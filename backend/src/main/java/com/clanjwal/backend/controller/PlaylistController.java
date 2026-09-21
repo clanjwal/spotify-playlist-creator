@@ -1,18 +1,20 @@
 package com.clanjwal.backend.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.clanjwal.backend.dto.CreatePlaylistRequest;
-import com.clanjwal.backend.dto.PlaylistRequest;
 import com.clanjwal.backend.dto.SpotifyTrack;
 import com.clanjwal.backend.service.PlaylistService;
 import com.clanjwal.backend.service.SpotifyService;
+import com.clanjwal.backend.service.SpotifyTokenStore;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -23,11 +25,13 @@ public class PlaylistController {
     private final PlaylistService playlistService;
     // SpotifyService only used for testing, delete later
     private final SpotifyService spotifyService;
+    private final SpotifyTokenStore spotifyTokenStore;
 
     // SpotifyService only used for testing, delete that portion later but keep PlaylistService portion
-    public PlaylistController(PlaylistService playlistService, SpotifyService spotifyService) {
+    public PlaylistController(PlaylistService playlistService, SpotifyService spotifyService, SpotifyTokenStore spotifyTokenStore) {
         this.playlistService = playlistService;
         this.spotifyService = spotifyService;
+        this.spotifyTokenStore = spotifyTokenStore;
     }
 
     @PostMapping("/create")
@@ -40,13 +44,13 @@ public class PlaylistController {
     }
 
     @GetMapping("/tracks")
-    public List<SpotifyTrack> testSavedTracks(@RequestBody PlaylistRequest request, HttpSession session) {
-        String accessToken = (String) session.getAttribute("spotifyAccessToken");
+    public List<SpotifyTrack> testSavedTracks(@RequestParam String userId, @RequestParam LocalDate start, @RequestParam LocalDate end) {
+        String accessToken = spotifyTokenStore.getToken(userId);
 
         if (accessToken == null) {
             throw new RuntimeException("Spotify account not connected.");
         }
 
-        return spotifyService.getSavedTracks(accessToken, request.getStart(), request.getEnd());
+        return spotifyService.getSavedTracks(accessToken, start, end);
     }
 }

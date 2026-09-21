@@ -9,6 +9,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import com.clanjwal.backend.dto.SpotifyTokenResponse;
 import com.clanjwal.backend.service.AuthService;
+import com.clanjwal.backend.service.SpotifyTokenStore;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -23,8 +24,11 @@ public class AuthController {
     private String redirectUri;
 
     private final AuthService authService;
-    public AuthController(AuthService authService) {
+    private final SpotifyTokenStore spotifyTokenStore;
+
+    public AuthController(AuthService authService, SpotifyTokenStore spotifyTokenStore) {
         this.authService = authService;
+        this.spotifyTokenStore = spotifyTokenStore;
     }
 
     @GetMapping("/spotify")
@@ -39,10 +43,10 @@ public class AuthController {
     }
 
     @GetMapping ("/callback")
-    public String callback(@RequestParam String code, HttpSession session){
-        SpotifyTokenResponse tokenResponse = authService.exchangeCodeForAccessToken(code);
-        
+    public RedirectView callback(@RequestParam String code, HttpSession session){
+        SpotifyTokenResponse tokenResponse = authService.exchangeCodeForAccessToken(code);;
         session.setAttribute("spotifyAccessToken", tokenResponse.getAccess_token());
-        return "Spotify account connected successfully!";
+        String userId = spotifyTokenStore.saveToken(tokenResponse.getAccess_token());
+        return new RedirectView("http://localhost:4200?userId=" + userId);
     }
 }

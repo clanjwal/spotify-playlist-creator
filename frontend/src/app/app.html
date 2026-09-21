@@ -1,1 +1,76 @@
-<h1>{{ message }}</h1>
+<h1>Spotify Playlist Creator</h1>
+
+<h2>Connect Spotify</h2>
+
+<button (click)="connectSpotify()">
+  Connect Spotify
+</button>
+
+<h2>Find Your Liked Songs</h2>
+
+<div>
+  <label>Start Date:</label>
+  <input
+    type="date"
+    [(ngModel)]="startDate"
+  >
+</div>
+
+<br>
+
+<div>
+  <label>End Date:</label>
+  <input
+    type="date"
+    [(ngModel)]="endDate"
+  >
+</div>
+
+<br>
+
+<button (click)="findTracks()">
+  Find Tracks
+</button>
+
+
+<hr>
+
+
+<h2>Tracks</h2>
+
+<p *ngIf="tracks.length === 0">
+  No tracks loaded yet.
+</p>
+
+<ul>
+  <li *ngFor="let track of tracks">
+    {{ track.name }} — {{ track.artist }}
+  </li>
+</ul>
+
+
+<hr>
+
+
+<div *ngIf="tracks.length > 0">
+
+  <h2>Create Playlist</h2>
+
+  <label>Playlist Name:</label>
+
+  <input
+    type="text"
+    [(ngModel)]="playlistName"
+    placeholder="My Spotify Playlist"
+  >
+
+  <br><br>
+
+  <button
+    (click)="createPlaylist()"
+    [disabled]="playlistName === ''"
+  >
+    Create Playlist
+  </button>
+
+</div>

@@ -1,20 +1,89 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { BackendService } from './services/backend.service';
+import { Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
+
+interface SpotifyTrack {
+  name: string;
+  artist: string;
+  uri: string;
+}
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
-  templateUrl: './app.html',
-  styleUrl: './app.css'
+  imports: [FormsModule, CommonModule],
+  templateUrl: './app.html'
 })
 export class App {
-  message = '';
-  constructor(private backendService: BackendService) {}
 
-  ngOnInit() {
-    this.backendService.getHello().subscribe(response => {
-      this.message = response;
+  startDate = '';
+  endDate = '';
+  playlistName = '';
+  userId = '';
+
+  tracks: SpotifyTrack[] = [];
+
+  constructor(
+    private http: HttpClient,
+    private route: ActivatedRoute
+  ) {
+    this.route.queryParams.subscribe(params => {
+      if (params['userId']) {
+        this.userId = params['userId'];
+      }
+    });
+  }
+
+  connectSpotify() {
+    window.location.href = 'http://localhost:8080/api/auth/spotify';
+  }
+
+  findTracks() {
+    this.http.get<SpotifyTrack[]>(
+      'http://localhost:8080/api/playlists/tracks',
+      {
+        params: {
+          userId: this.userId,
+          start: this.startDate,
+          end: this.endDate
+        }
+      }
+    ).subscribe({
+      next: (tracks) => {
+        this.tracks = tracks;
+      },
+      error: (error) => {
+        console.error(error);
+        alert('Could not get tracks.');
+      }
+    });
+  }
+
+  createPlaylist() {
+
+    const trackUris = this.tracks.map(track => track.uri);
+
+    const request = {
+      playlistName: this.playlistName,
+      trackUris: trackUris
+    };
+
+    this.http.post(
+      'http://localhost:8080/api/playlists/create',
+      request,
+      {
+        withCredentials: true,
+        responseType: 'text'
+      }
+    ).subscribe({
+      next: (response) => {
+        alert(response);
+      },
+      error: (error) => {
+        console.error(error);
+        alert('Could not create playlist.');
+      }
     });
   }
 }
