@@ -1,0 +1,92 @@
+<div class="rounded-2xl bg-neutral-900 p-4 ring-1 ring-white/10 sm:p-6">
+  <div class="mb-5 flex flex-wrap items-end gap-3">
+    <div class="min-w-0 flex-1">
+      <label for="range-start" class="mb-1 block text-xs font-medium text-neutral-400">Start date</label>
+      <input id="range-start" type="date" [min]="minIso" [max]="todayIso"
+        [value]="start() ?? ''"
+        (change)="typeDate('start', $any($event.target).value)"
+        class="scheme-dark w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-green-500" />
+    </div>
+    <div class="min-w-0 flex-1">
+      <label for="range-end" class="mb-1 block text-xs font-medium text-neutral-400">End date</label>
+      <input id="range-end" type="date" [min]="minIso" [max]="todayIso"
+        [value]="end() ?? ''"
+        (change)="typeDate('end', $any($event.target).value)"
+        class="scheme-dark w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-green-500" />
+    </div>
+    <button type="button" (click)="clear()" [disabled]="!start() && !end()"
+      class="rounded-lg px-3 py-2 text-sm text-neutral-400 hover:text-white disabled:invisible">
+      Clear
+    </button>
+  </div>
+  <p class="mb-4 min-h-5 text-xs text-neutral-400" aria-live="polite">{{ hint() }}</p>
+
+  <div class="flex items-start gap-2">
+    <button type="button" (click)="shift(-1)" [disabled]="!canGoBack()" aria-label="Previous month"
+      class="mt-0.5 rounded-full p-2 text-neutral-300 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:text-neutral-700 disabled:hover:bg-transparent">
+      <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+        <path d="M12.7 4.3a1 1 0 0 1 0 1.4L8.4 10l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z" />
+      </svg>
+    </button>
+
+    <div class="grid min-w-0 flex-1 grid-cols-1 gap-6 sm:grid-cols-2">
+      @for (month of months(); track $index; let i = $index) {
+        <div class="min-w-0" [class]="i === 1 ? 'hidden sm:block' : ''">
+          <div class="mb-3 flex items-center justify-center gap-1.5">
+            <select [attr.aria-label]="i === 0 ? 'Month' : 'Month (right calendar)'"
+              (change)="setMonth(i, $any($event.target).value)"
+              class="scheme-dark rounded-md bg-neutral-800 px-2 py-1 text-sm font-semibold text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-green-500">
+              @for (name of monthNames; track $index; let m = $index) {
+                <option [value]="m" [selected]="m === month.month" [disabled]="isMonthDisabled(month, m, i)">{{ name }}</option>
+              }
+            </select>
+            <select [attr.aria-label]="i === 0 ? 'Year' : 'Year (right calendar)'"
+              (change)="setYear(i, $any($event.target).value)"
+              class="scheme-dark rounded-md bg-neutral-800 px-2 py-1 text-sm font-semibold text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-green-500">
+              @for (year of years; track year) {
+                <option [value]="year" [selected]="year === month.year">{{ year }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="grid grid-cols-7 text-center text-xs text-neutral-500">
+            @for (weekday of weekdays; track weekday) {
+              <span class="py-1">{{ weekday }}</span>
+            }
+          </div>
+          <div class="grid grid-cols-7 text-center text-sm">
+            @for (cell of month.cells; track $index) {
+              @if (cell) {
+                <div class="relative h-9">
+                  @if (stripClass(cell); as strip) {
+                    <span class="absolute inset-y-0 bg-green-500/20" [class]="strip"></span>
+                  }
+                  <button type="button"
+                    [disabled]="cell.disabled"
+                    [attr.aria-label]="format(cell.iso)"
+                    [attr.aria-pressed]="isSelected(cell.iso)"
+                    (click)="select(cell)"
+                    (mouseenter)="hovered.set(cell.iso)"
+                    (mouseleave)="hovered.set(null)"
+                    class="relative mx-auto block h-9 w-9 rounded-full transition-colors disabled:cursor-not-allowed disabled:text-neutral-700"
+                    [class]="cellClass(cell)">
+                    {{ cell.day }}
+                  </button>
+                </div>
+              } @else {
+                <span class="h-9"></span>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <button type="button" (click)="shift(1)" [disabled]="!canGoForward()" aria-label="Next month"
+      class="mt-0.5 rounded-full p-2 text-neutral-300 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:text-neutral-700 disabled:hover:bg-transparent">
+      <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+        <path d="M7.3 15.7a1 1 0 0 1 0-1.4l4.3-4.3-4.3-4.3a1 1 0 0 1 1.4-1.4l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4 0Z" />
+      </svg>
+    </button>
+  </div>
+</div>

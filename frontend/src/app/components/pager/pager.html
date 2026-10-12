@@ -1,0 +1,31 @@
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <p class="text-sm text-neutral-400">{{ summary() }}</p>
+
+  @if (pageCount() > 1) {
+    <nav class="flex items-center gap-1" aria-label="Song pages">
+      <button type="button" (click)="pageChange.emit(page() - 1)" [disabled]="page() === 1"
+        aria-label="Previous page"
+        class="rounded-full px-3 py-1.5 text-sm text-neutral-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:text-neutral-700 disabled:hover:bg-transparent">
+        Prev
+      </button>
+      @for (item of items(); track $index) {
+        @if (item === null) {
+          <span class="px-1 text-neutral-500" aria-hidden="true">…</span>
+        } @else {
+          <button type="button" (click)="pageChange.emit(item)"
+            [attr.aria-current]="item === page() ? 'page' : null"
+            [attr.aria-label]="'Page ' + item"
+            class="h-8 min-w-8 rounded-full px-2 text-sm tabular-nums"
+            [class]="item === page() ? 'bg-green-500 font-semibold text-black' : 'text-neutral-200 hover:bg-white/10'">
+            {{ item }}
+          </button>
+        }
+      }
+      <button type="button" (click)="pageChange.emit(page() + 1)" [disabled]="page() === pageCount()"
+        aria-label="Next page"
+        class="rounded-full px-3 py-1.5 text-sm text-neutral-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:text-neutral-700 disabled:hover:bg-transparent">
+        Next
+      </button>
+    </nav>
+  }
+</div>

@@ -5,19 +5,26 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import com.clanjwal.backend.dto.AddTracksRequest;
+import com.clanjwal.backend.dto.SpotifyArtist;
+import com.clanjwal.backend.dto.SpotifyImage;
 import com.clanjwal.backend.dto.SpotifyPlaylistResponse;
 import com.clanjwal.backend.dto.SpotifySavedTrack;
 import com.clanjwal.backend.dto.SpotifySavedTracksResponse;
 import com.clanjwal.backend.dto.SpotifyTrack;
+import com.clanjwal.backend.dto.SpotifyTrackInfo;
 
 
-@Service 
+@Service
 public class SpotifyService {
+    private static final int ADD_TRACKS_BATCH_SIZE = 100; // Spotify API allows a maximum of 100 items per add request
+    private static final int MIN_COVER_WIDTH = 128;
+
     private final RestClient restClient;
 
     public SpotifyService(RestClient.Builder restClientBuilder) {
@@ -43,15 +50,9 @@ public class SpotifyService {
 
             for(SpotifySavedTrack savedTrack : response.getItems()) {
                 Instant addedAt = Instant.parse(savedTrack.getAdded_at());
-                if (!addedAt.isBefore(start) && addedAt.isBefore(end)) {
-                    matchingTracks.add(
-                        new SpotifyTrack(
-                            savedTrack.getTrack().getId(),
-                            savedTrack.getTrack().getName(),
-                            savedTrack.getTrack().getUri(),
-                            addedAt
-                        )
-                    );
+                SpotifyTrackInfo track = savedTrack.getTrack();
+                if (track != null && !addedAt.isBefore(start) && addedAt.isBefore(end)) {
+                    matchingTracks.add(toSpotifyTrack(track, addedAt));
                 }
 
                 if(addedAt.isBefore(start)){
@@ -66,26 +67,53 @@ public class SpotifyService {
         return matchingTracks;
     }
 
-    public String addTracksToPlaylist(String accessToken, String playlistId, List<String> trackUris){
-        AddTracksRequest request = new AddTracksRequest();
-        request.setUris(trackUris);
-        return restClient.post()
-                .uri("/playlists/" + playlistId + "/items")
-                .header("Authorization", "Bearer " + accessToken)
-                .header("Content-Type", "application/json")
-                .body(request)
-                .retrieve()
-                .body(String.class);
+    private SpotifyTrack toSpotifyTrack(SpotifyTrackInfo track, Instant addedAt) {
+        List<String> artists = track.getArtists() == null ? List.of()
+                : track.getArtists().stream().map(SpotifyArtist::getName).toList();
+        String albumName = null;
+        String albumImageUrl = null;
+        if (track.getAlbum() != null) {
+            albumName = track.getAlbum().getName();
+            albumImageUrl = pickCoverUrl(track.getAlbum().getImages());
+        }
+        return new SpotifyTrack(track.getId(), track.getName(), track.getUri(), addedAt,
+                track.getDuration_ms(), artists, albumName, albumImageUrl);
+    }
+
+    // Spotify lists album images largest first; take the smallest one that is still sharp enough for a thumbnail
+    private String pickCoverUrl(List<SpotifyImage> images) {
+        if (images == null || images.isEmpty()) {
+            return null;
+        }
+        String best = images.get(0).getUrl();
+        for (SpotifyImage image : images) {
+            if (image.getWidth() != null && image.getWidth() >= MIN_COVER_WIDTH) {
+                best = image.getUrl();
+            }
+        }
+        return best;
+    }
+
+    public void addTracksToPlaylist(String accessToken, String playlistId, List<String> trackUris){
+        for (int i = 0; i < trackUris.size(); i += ADD_TRACKS_BATCH_SIZE) {
+            AddTracksRequest request = new AddTracksRequest();
+            request.setUris(trackUris.subList(i, Math.min(i + ADD_TRACKS_BATCH_SIZE, trackUris.size())));
+            restClient.post()
+                    .uri("/playlists/" + playlistId + "/items")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Content-Type", "application/json")
+                    .body(request)
+                    .retrieve()
+                    .toBodilessEntity();
+        }
     }
 
     public SpotifyPlaylistResponse createSpotifyPlaylist(String accessToken, String playlistName) {
-        String body = """
-            {
-                "name": "%s",
-                "description": "Created using Playlist Creator by Cassandra Lanjwal",
-                "public": false
-            }
-            """.formatted(playlistName);
+        Map<String, Object> body = Map.of(
+            "name", playlistName,
+            "description", "Created using Playlist Creator by Cassandra Lanjwal",
+            "public", false
+        );
         return restClient.post()
             .uri("/me/playlists")
             .header("Authorization", "Bearer " + accessToken)

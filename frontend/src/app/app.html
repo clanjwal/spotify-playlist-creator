@@ -1,1 +1,214 @@
-<h1>{{ message }}</h1>
+<div class="min-h-screen bg-neutral-950 text-white">
+  <header class="border-b border-white/10">
+    <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+      <h1 class="flex items-center gap-2 text-lg font-bold tracking-tight">
+        <span class="inline-block h-3 w-3 rounded-full bg-green-500"></span>
+        Playlist Creator
+      </h1>
+      @if (authState() === 'connected') {
+        <button type="button" (click)="disconnect()"
+          class="text-sm text-neutral-400 hover:text-white">
+          Disconnect
+        </button>
+      }
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-4 py-8" [class.pb-40]="tracks()">
+    @if (error()) {
+      <div role="alert" class="mb-6 rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300 ring-1 ring-red-500/30">
+        {{ error() }}
+      </div>
+    }
+
+    @switch (authState()) {
+      @case ('checking') {
+        <p class="py-24 text-center text-neutral-400">Checking your Spotify connection…</p>
+      }
+
+      @case ('disconnected') {
+        <section class="mx-auto max-w-md py-16 text-center">
+          <h2 class="text-3xl font-bold tracking-tight">Turn a stretch of your liked songs into a playlist</h2>
+          <p class="mt-4 text-neutral-400">
+            Connect your Spotify account, pick a date range, and choose which songs
+            you added during that time to put in a new private playlist.
+          </p>
+          <a [href]="loginUrl"
+            class="mt-8 inline-block rounded-full bg-green-500 px-8 py-3 font-semibold text-black transition hover:scale-105 hover:bg-green-400">
+            Connect with Spotify
+          </a>
+        </section>
+      }
+
+      @case ('connected') {
+        <section>
+          <h2 class="mb-1 text-xl font-bold">1. Pick a date range</h2>
+          <p class="mb-4 text-sm text-neutral-400">
+            Songs you liked on both the first and last day are included (dates are in UTC).
+          </p>
+          <app-date-range-picker [(start)]="start" [(end)]="end" />
+
+          <div class="mt-6 flex justify-center">
+            <button type="button" (click)="loadTracks()" [disabled]="!canLoad()"
+              class="rounded-full bg-green-500 px-10 py-3 font-semibold text-black transition enabled:hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-40">
+              {{ loading() ? 'Loading songs…' : 'Load songs' }}
+            </button>
+          </div>
+        </section>
+
+        @if (tracks(); as list) {
+          <section class="mt-10">
+            <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 class="text-xl font-bold">2. Choose songs</h2>
+                <p class="text-sm text-neutral-400">
+                  {{ selectedUris().length }} of {{ list.length }} selected
+                </p>
+              </div>
+              @if (list.length > 0) {
+                <div class="flex flex-wrap gap-2">
+                  @if (pageCount() > 1) {
+                    <button type="button" (click)="toggleShown()"
+                      class="rounded-full px-4 py-1.5 text-sm font-medium text-neutral-200 ring-1 ring-white/20 hover:bg-white/10">
+                      {{ allShownSelected() ? 'Deselect page' : 'Select page' }}
+                    </button>
+                  }
+                  <button type="button" (click)="toggleAll()"
+                    class="rounded-full px-4 py-1.5 text-sm font-medium text-neutral-200 ring-1 ring-white/20 hover:bg-white/10">
+                    {{ allSelected() ? 'Deselect all' : 'Select all' }}
+                  </button>
+                </div>
+              }
+            </div>
+
+            @if (list.length === 0) {
+              <p class="rounded-xl bg-neutral-900 px-4 py-10 text-center text-neutral-400 ring-1 ring-white/10">
+                You did not like any songs in this date range.
+              </p>
+            } @else {
+              <div class="mb-3 flex flex-wrap items-end gap-x-4 gap-y-3">
+                <div>
+                  <label for="sort-key" class="mb-1 block text-xs font-medium text-neutral-400">Sort by</label>
+                  <div class="flex items-center gap-2">
+                    <select id="sort-key" (change)="setSort($any($event.target).value)"
+                      class="scheme-dark rounded-lg bg-neutral-800 px-3 py-2 text-sm text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-green-500">
+                      @for (option of sortOptions; track option.key) {
+                        <option [value]="option.key" [selected]="option.key === sortKey()">{{ option.label }}</option>
+                      }
+                    </select>
+                    <button type="button" (click)="toggleSortDirection()"
+                      [attr.aria-label]="'Sort order: ' + sortDirectionLabel() + '. Click to reverse.'"
+                      class="flex items-center gap-1.5 rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-200 ring-1 ring-white/10 hover:bg-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500">
+                      <svg viewBox="0 0 20 20" class="h-4 w-4 transition-transform" [class.rotate-180]="sortDirection() === 'desc'"
+                        fill="currentColor" aria-hidden="true">
+                        <path d="M10 17a1 1 0 0 1-1-1V6.41l-2.3 2.3a1 1 0 0 1-1.4-1.42l4-4a1 1 0 0 1 1.4 0l4 4a1 1 0 1 1-1.4 1.42L11 6.41V16a1 1 0 0 1-1 1Z" />
+                      </svg>
+                      {{ sortDirectionLabel() }}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label for="page-size" class="mb-1 block text-xs font-medium text-neutral-400">Songs per page</label>
+                  <app-page-size-select inputId="page-size"
+                    [value]="pageSize()" [options]="pageSizeOptions" [max]="list.length"
+                    (sizeChange)="setPageSize($event)" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <app-pager [page]="currentPage()" [pageCount]="pageCount()" [summary]="pageSummary()"
+                  (pageChange)="goToPage($event)" />
+              </div>
+
+              <ul id="song-list" class="scroll-mt-4 divide-y divide-white/5 overflow-hidden rounded-2xl bg-neutral-900 ring-1 ring-white/10">
+                @for (track of pageTracks(); track track.uri) {
+                  <li>
+                    <label class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition hover:bg-white/5 sm:gap-4 sm:px-4"
+                      [class.opacity-50]="!selected().has(track.uri)">
+                      <input type="checkbox" class="peer sr-only"
+                        [checked]="selected().has(track.uri)"
+                        (change)="toggle(track.uri)"
+                        [attr.aria-label]="'Include ' + track.name" />
+                      <span aria-hidden="true"
+                        class="grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 border-neutral-600 text-black transition peer-checked:border-green-500 peer-checked:bg-green-500 peer-focus-visible:ring-2 peer-focus-visible:ring-green-400 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-neutral-900">
+                        @if (selected().has(track.uri)) {
+                          <svg viewBox="0 0 16 16" class="h-3.5 w-3.5" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 8.5 6.5 12 13 4.5" />
+                          </svg>
+                        }
+                      </span>
+
+                      @if (track.albumImageUrl) {
+                        <img [src]="track.albumImageUrl" [alt]="track.albumName ? track.albumName + ' album cover' : 'Album cover'"
+                          width="48" height="48" loading="lazy"
+                          class="h-12 w-12 shrink-0 rounded bg-neutral-800 object-cover" />
+                      } @else {
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-neutral-800 text-neutral-500" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor">
+                            <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6Z" />
+                          </svg>
+                        </div>
+                      }
+
+                      <div class="min-w-0 flex-1">
+                        <p class="truncate font-medium">{{ track.name }}</p>
+                        <p class="truncate text-sm text-neutral-400">
+                          {{ artistLine(track) }}@if (track.albumName) { · {{ track.albumName }} }
+                        </p>
+                      </div>
+
+                      <time class="hidden shrink-0 text-xs text-neutral-500 sm:block" [attr.datetime]="track.addedAt">
+                        {{ track.addedAt | date: 'mediumDate' : 'UTC' }}
+                      </time>
+                      <span class="w-10 shrink-0 text-right text-xs tabular-nums text-neutral-400">
+                        {{ formatDuration(track.durationMs) }}
+                      </span>
+                    </label>
+                  </li>
+                }
+              </ul>
+
+              <div class="mt-4">
+                <app-pager [page]="currentPage()" [pageCount]="pageCount()" [summary]="pageSummary()"
+                  (pageChange)="goToPage($event)" />
+              </div>
+            }
+          </section>
+        }
+      }
+    }
+  </main>
+
+  @if (authState() === 'connected' && tracks() && tracks()!.length > 0) {
+    <footer class="fixed inset-x-0 bottom-0 border-t border-white/10 bg-neutral-950/95 backdrop-blur">
+      <div class="mx-auto max-w-3xl px-4 py-4">
+        @if (created(); as playlist) {
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-green-300">
+              Created “{{ playlist.name }}” with {{ playlist.trackCount }}
+              {{ playlist.trackCount === 1 ? 'song' : 'songs' }}.
+            </p>
+            <a [href]="playlist.url" target="_blank" rel="noopener noreferrer"
+              class="rounded-full bg-green-500 px-5 py-2 text-sm font-semibold text-black hover:bg-green-400">
+              Open in Spotify
+            </a>
+          </div>
+        } @else {
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <label class="sr-only" for="playlist-name">Playlist name</label>
+            <input id="playlist-name" type="text" maxlength="100" placeholder="Playlist name"
+              [value]="playlistName()"
+              (input)="playlistName.set($any($event.target).value)"
+              class="min-w-0 flex-1 rounded-full bg-neutral-900 px-4 py-2.5 text-sm text-white ring-1 ring-white/20 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-green-500" />
+            <button type="button" (click)="createPlaylist()" [disabled]="!canCreate()"
+              class="rounded-full bg-green-500 px-6 py-2.5 font-semibold text-black transition enabled:hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-40">
+              {{ creating() ? 'Creating…' : 'Create playlist (' + selectedUris().length + ')' }}
+            </button>
+          </div>
+        }
+      </div>
+    </footer>
+  }
+</div>
